@@ -14,38 +14,14 @@ SCOPES = 'https://www.googleapis.com/auth/drive'
 
 mimeTypes = [ "application/vnd.google-apps.document", "application/vnd.google-apps.spreadsheet", "application/vnd.google-apps.presentation", "application/vnd.google-apps.drawing"]
 
-def auth():
-    """Shows basic usage of the Drive v3 API.
-    Prints the names and ids of the first 10 files the user has access to.
-    """
-    creds = None
-    # The file token.pickle stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            creds = pickle.load(token)
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
-            pickle.dump(creds, token)
+pickle_name="0"
 
-    service = build('drive', 'v3', credentials=creds)
-    return service
-
-def list(path, directory):
+def list(path, directory,service):
 
     temp_directory = []
 
-    service = auth()
     folder_id = directory[path]
+
     results = service.files().list(q="'" + folder_id + "' in parents and trashed=false").execute()
 
     items = results.get('files', [])
@@ -101,8 +77,7 @@ def list(path, directory):
 
     return directory
 
-def create(folder_name, parent_id=None):
-    service = auth()
+def create(folder_name, service,parent_id=None):
 
     folder = {
         'name': folder_name,
@@ -119,8 +94,7 @@ def create(folder_name, parent_id=None):
     return file.get('id')
 
 
-def upload(file_path, file_name, folder_id):
-    service = auth()
+def upload(file_path, file_name, folder_id,service):
 
     file_metadata = {
         'name': file_name,
@@ -139,18 +113,16 @@ def copy(from_path, to_path, directory):
 
     upload(from_path, file_name, folder_id)
 
-def move(from_path, to_path, directory):
+def move(from_path, to_path, directory,service):
 
     file_id = directory[from_path]
 
     folder_id = directory[to_path]
 
-    service = auth()
-
     file = service.files().get(fileId=file_id, fields='parents').execute()
 
     previous_parents = ",".join(file.get('parents'))
-
+    print(previous_parents)
     file = service.files().update(fileId=file_id, addParents=folder_id, removeParents=previous_parents, fields='id, parents').execute()
 
     del directory[from_path]
@@ -163,8 +135,7 @@ def move(from_path, to_path, directory):
     return directory
 
 
-def trash(path, directory):
-    service = auth()
+def trash(path, directory,service):
 
     file_id = directory[path]
 
@@ -184,9 +155,8 @@ def trash(path, directory):
     return directory
 
 
-def download(file_id, filename):
-    service = auth()
-
+def download(file_id, filename,service):
+    
     request = service.files().get_media(fileId=file_id)
 
     fh = io.FileIO(filename, 'wb')
